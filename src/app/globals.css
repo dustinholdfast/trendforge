@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Surfaces — near-black, low chroma, small steps between levels. */
+  --color-canvas: #08080b;
+  --color-surface: #0e0e12;
+  --color-raised: #14141a;
+  --color-hover: #1a1a21;
+  --color-line: #212129;
+  --color-line-strong: #2e2e39;
+
+  /* Text */
+  --color-hi: #f4f4f5;
+  --color-mid: #a1a1aa;
+  --color-lo: #6b6b76;
+
+  /* Accents — used sparingly, as signal not decoration. */
+  --color-accent: #7c86ff;
+  --color-hot: #ff8a4c;
+  --color-warm: #f5c451;
+  --color-cool: #4cc3a5;
+
+  --radius-card: 10px;
+}
+
+* {
+  border-color: var(--color-line);
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-hi);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-accent) 35%, transparent);
+}
+
+/* Scrollbars that don't shout. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 8px;
+  border: 3px solid var(--color-canvas);
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes tf-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tf-in {
+  animation: tf-fade-up 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes tf-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.tf-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-raised);
+}
+.tf-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--color-hi) 5%, transparent),
+    transparent
+  );
+  animation: tf-shimmer 1.4s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-in,
+  .tf-skeleton::after {
+    animation: none;
+  }
+}
