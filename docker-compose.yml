@@ -1,0 +1,48 @@
+# TrendForge — Ubuntu / any Docker host
+#
+#   cp .env.example .env    # set AUTH_SECRET + one AI key + a sign-in method
+#   docker compose up -d --build
+#
+# App:  http://<host>:3000
+# Data: Docker volume `trendforge_data` (SQLite at /data/trendforge.db)
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trendforge:latest
+    container_name: trendforge
+    restart: unless-stopped
+    ports:
+      - "${TRENDFORGE_PORT:-3000}:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      HOSTNAME: "0.0.0.0"
+      PORT: "3000"
+      DATA_DIR: /data
+      # Named volume path. Overrides a host-relative file:./trendforge.db
+      # from .env.example so the database actually persists.
+      DATABASE_URL: file:/data/trendforge.db
+      AUTH_TRUST_HOST: "true"
+    volumes:
+      - trendforge_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 40s
+    stop_grace_period: 15s
+
+volumes:
+  trendforge_data:

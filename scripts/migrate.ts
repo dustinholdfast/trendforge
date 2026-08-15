@@ -1,25 +1,14 @@
 /**
- * Applies the SQL migrations in ./drizzle to the configured database.
- * Idempotent — safe to run on every deploy.
+ * Thin wrapper so `tsx scripts/migrate.ts` still works.
+ * The canonical migrator is `scripts/migrate.mjs` (no tsx required).
  */
-import "dotenv/config";
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
-import { migrate } from "drizzle-orm/libsql/migrator";
+import { spawnSync } from "node:child_process";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-async function main() {
-  const url = process.env.DATABASE_URL ?? "file:./trendforge.db";
-  const client = createClient({
-    url,
-    authToken: process.env.DATABASE_AUTH_TOKEN,
-  });
-  const db = drizzle(client);
-  await migrate(db, { migrationsFolder: "./drizzle" });
-  console.log(`✓ migrations applied to ${url}`);
-  client.close();
-}
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
+const script = resolve(dirname(fileURLToPath(import.meta.url)), "migrate.mjs");
+const result = spawnSync(process.execPath, [script], {
+  stdio: "inherit",
+  env: process.env,
 });
+process.exit(result.status ?? 1);

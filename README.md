@@ -38,6 +38,106 @@ fallback throws in production rather than leaking links.
 
 ---
 
+## Deploy with Docker (Ubuntu)
+
+The image is a multi-stage Next.js standalone build. SQLite is stored on a
+Docker volume at `/data/trendforge.db`, so rebuilds do not wipe workspaces,
+sessions, or generated assets. Migrations run automatically on every start.
+
+### 1. Install Docker
+
+On a fresh Ubuntu host:
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker "$USER"
+# log out and back in so the docker group applies
+```
+
+Confirm with `docker compose version`.
+
+### 2. Clone and configure
+
+```bash
+git clone https://github.com/dustinholdfast/trendforge.git
+cd trendforge
+cp .env.example .env
+nano .env
+```
+
+Set at least:
+
+| Variable | Why |
+| --- | --- |
+| `AUTH_SECRET` | Required. `openssl rand -base64 32` |
+| `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` | Required. One AI provider |
+| `EMAIL_SERVER` + `EMAIL_FROM` **or** `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET` | Required in production — the terminal magic-link fallback is refused |
+| `AUTH_URL` | Set to the URL you will open in a browser, e.g. `http://203.0.113.10:3000` or `https://trendforge.example.com` |
+
+`DATABASE_URL` in `.env` is ignored by Compose: the container always uses
+`file:/data/trendforge.db` on the named volume.
+
+Google OAuth callback for this host:
+
+```
+http://YOUR_HOST:3000/api/auth/callback/google
+```
+
+(or `https://your.domain/api/auth/callback/google` behind TLS).
+
+### 3. Build and run
+
+```bash
+docker compose up -d --build
+docker compose logs -f app
+```
+
+Open `http://YOUR_SERVER_IP:3000`. To publish on another host port:
+
+```bash
+TRENDFORGE_PORT=8080 docker compose up -d
+```
+
+Useful commands:
+
+```bash
+docker compose ps              # health
+docker compose logs -f app     # Auth.js / scrape / generate output
+docker compose restart app     # after editing .env
+docker compose down            # stop (volume is kept)
+docker compose down -v         # stop AND delete the database volume
+```
+
+### 4. HTTPS with Caddy (optional)
+
+Point DNS at the box, then a Caddyfile in front of the container:
+
+```caddy
+trendforge.example.com {
+    reverse_proxy 127.0.0.1:3000
+}
+```
+
+Set `AUTH_URL=https://trendforge.example.com` and the Google callback to
+`https://trendforge.example.com/api/auth/callback/google`. If you terminate
+TLS yourself, forward `X-Forwarded-Host`, `X-Forwarded-Proto`, and
+`X-Forwarded-For` — `AUTH_TRUST_HOST=true` is already set.
+
+### Backing up
+
+```bash
+docker compose cp app:/data/trendforge.db ./trendforge-backup.db
+```
+
+Or archive the volume:
+
+```bash
+docker run --rm -v trendforge_trendforge_data:/data -v "$PWD":/backup \
+  alpine tar czf /backup/trendforge-data.tgz -C /data .
+```
+
+---
+
 ## The loop
 
 1. **Onboarding** — enter a niche. If you don't name subreddits, Reddit is asked
@@ -136,7 +236,9 @@ src/
     content/          generation prompt, output schema, asset splitting
     sources/          reddit · google-trends · x adapters
     trends/           score.ts (pure, tested) · discover.ts (orchestration)
-scripts/              migrate · check-sources · smoke
+scripts/              migrate · docker-entrypoint · check-sources · smoke
+Dockerfile            production image (standalone Next.js)
+docker-compose.yml    Ubuntu / any Docker host
 ```
 
 ---

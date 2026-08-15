@@ -131,7 +131,7 @@ async function seed() {
   await new Promise((resolve, reject) => {
     const proc = spawn(
       process.execPath,
-      ["node_modules/tsx/dist/cli.mjs", "scripts/migrate.ts"],
+      ["scripts/migrate.mjs"],
       { env: { ...process.env, DATABASE_URL: DB }, stdio: "inherit" },
     );
     proc.on("exit", (code) => (code === 0 ? resolve() : reject(new Error("migrate failed"))));
